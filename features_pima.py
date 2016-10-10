@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import pdb
 
 def extract_features(file='/diabetes.csv'):
     data = pd.read_csv('./diabetes.csv')
