@@ -10,9 +10,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, \
                              ExtraTreesClassifier
 
-data = extract_features()
-X = data.ix[:, :-1]
-y = data.ix[:, -1]
+X, y = extract_features()
 
 # Isolate a training set for CV.
 # Testing set won't be touched until CV is complete.
@@ -39,12 +37,17 @@ X_test = impute_pima(X_test)
 
 # Instantiate logistic regression
 clf = LogisticRegression()
-print "="*50
-print "\nLogistic regression results for 10-fold cross-validation:"
+
+#Cross-validate logistic regression
+print("\nLogistic regression results for 10-fold cross-validation:\n")
 scores = cross_val_score(clf, X_train, y_train, cv=10, scoring='accuracy')
-print "Accuracies:\n %s\n" % str(scores)
+print(("Accuracies:\n %s\n\n" +
+       "Best accuracy on held-out data: %.4f\n\n" +
+       "Mean accuracy on held-out data: %.4f\n\n") % (str(scores), scores.max(), scores.mean()))
 scores = cross_val_score(clf, X_train, y_train, cv=10, scoring='roc_auc')
-print "\nAUC:\n %s\n" % str(scores)
+print(("AUC:\n %s\n\n" +
+       "Best AUC on held-out data: %.4f\n\n" + 
+       "Mean AUC on held-out data: %.4f\n\n") % (str(scores), scores.max(), scores.mean()))
 
 # Instantiate XGBoost
 n_estimators = 100
@@ -68,16 +71,17 @@ num_boost_round = bst.get_params()['n_estimators'] # XGB-CV has different names 
 cvresult = xgb.cv(params, dtrain, num_boost_round=num_boost_round, 
                   nfold=10, metrics=['logloss', 'auc'], seed=1)
 
-print "="*50
-print "\nXGBoost results for 10-fold cross-validation:"
-print cvresult
+print("="*80)
+print("\nXGBoost results for 10-fold cross-validation:")
+print(cvresult)
+print("="*80)
 
 # XGBoost summary
-print "="*50
-print "\nXGBoost summary for 100 rounds of 10-fold cross-validation:"
-print "\nBest mean log-loss: %.4f" % cvresult['test-logloss-mean'].min()
-print "\nBest mean AUC: %.4f" % cvresult['test-auc-mean'].max()
-print "="*50
+print("="*80)
+print("\nXGBoost summary for 100 rounds of 10-fold cross-validation:")
+print("\nBest mean log-loss: %.4f" % cvresult['test-logloss-mean'].min())
+print("\nBest mean AUC: %.4f" % cvresult['test-auc-mean'].max())
+print("="*80)
 
 ########################################
 # Test
@@ -86,24 +90,24 @@ print "="*50
 clf.fit(X_train, y_train)
 pred = clf.predict(X_test)
 
-print "="*50
-print "\nLogistic regression performance on unseen data:"
-print "\nlog-loss: %.4f" % log_loss(y_test, pred)
-print "\nAUC: %.4f" % roc_auc_score(y_test, pred)
-print "\nF1 score: %.4f" % f1_score(y_test, pred)
-print "\nAccuracy: %.4f" % accuracy_score(y_test, pred)
-print "="*50
+print("="*80)
+print("\nLogistic regression performance on unseen data:")
+print("\nlog-loss: %.4f" % log_loss(y_test, pred))
+print("\nAUC: %.4f" % roc_auc_score(y_test, pred))
+print("\nF1 score: %.4f" % f1_score(y_test, pred))
+print("\nAccuracy: %.4f" % accuracy_score(y_test, pred))
+print("="*80)
 
 bst.fit(X_train, y_train, eval_metric='logloss')
 pred = bst.predict(X_test)
 
-print "="*50
-print "\nXGBoost performance on unseen data:"
-print "\nlog-loss: %.4f" % log_loss(y_test, pred)
-print "\nAUC: %.4f" % roc_auc_score(y_test, pred)
-print "\nF1 score: %.4f" % f1_score(y_test, pred)
-print "\nAccuracy: %.4f" % accuracy_score(y_test, pred)
-print "="*50
+print("="*80)
+print("\nXGBoost performance on unseen data:")
+print("\nlog-loss: %.4f" % log_loss(y_test, pred))
+print("\nAUC: %.4f" % roc_auc_score(y_test, pred))
+print("\nF1 score: %.4f" % f1_score(y_test, pred))
+print("\nAccuracy: %.4f" % accuracy_score(y_test, pred))
+print("="*80)
 
 """
 clf = RandomForestClassifier(n_estimators=100, max_depth=4, max_features=5)

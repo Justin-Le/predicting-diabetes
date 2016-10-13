@@ -11,8 +11,8 @@ import seaborn as sns
 plt.style.use('ggplot')
 
 data = pd.read_csv('./diabetes.csv')
-print data.shape
-print data.head()
+print(data.shape)
+print(data.head())
 
 # Impute meaningless zero values
 # data = impute_pima(data)
