@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from features_pima import *
 
 # Import Seaborn for plotting
 # and ignore all warnings
@@ -10,27 +11,15 @@ import seaborn as sns
 plt.style.use('ggplot')
 
 data = pd.read_csv('./diabetes.csv')
-print data.head()
 print data.shape
+print data.head()
 
-# y = data.Outcome
-# X = data.drop('Outcome', 1)
+# Impute meaningless zero values
+# data = impute_pima(data)
 
 ########################################
 # Abscissa: glucose
 ########################################
-
-"""
-grid = sns.FacetGrid(data, hue='Outcome')
-grid.map(plt.scatter, 'Glucose', 'BloodPressure')
-grid.add_legend()
-plt.show()
-
-grid = sns.FacetGrid(data, hue='Outcome')
-grid.map(plt.scatter, 'Glucose', 'SkinThickness')
-grid.add_legend()
-plt.show()
-"""
 
 grid = sns.FacetGrid(data, hue='Outcome')
 grid.map(plt.scatter, 'Glucose', 'Insulin')
@@ -66,25 +55,6 @@ grid.add_legend()
 plt.show()
 
 # High risk: blood_geq_92
-
-"""
-# These scatterplots verify previous ones
-
-grid = sns.FacetGrid(data, hue='Outcome')
-grid.map(plt.scatter, 'BloodPressure', 'Insulin')
-grid.add_legend()
-plt.show()
-
-grid = sns.FacetGrid(data, hue='Outcome')
-grid.map(plt.scatter, 'BloodPressure', 'BMI')
-grid.add_legend()
-plt.show()
-
-grid = sns.FacetGrid(data, hue='Outcome')
-grid.map(plt.scatter, 'BloodPressure', 'DiabetesPedigreeFunction')
-grid.add_legend()
-plt.show()
-"""
 
 ########################################
 # Histograms

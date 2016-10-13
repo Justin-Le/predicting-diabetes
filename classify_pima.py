@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from features_pima import *
 import xgboost as xgb
 from xgboost import XGBClassifier
@@ -9,16 +8,38 @@ from sklearn.metrics import log_loss, roc_auc_score, f1_score, accuracy_score
 from sklearn.ensemble import RandomForestClassifier, \
                              ExtraTreesClassifier
 
-data = pd.read_csv('./diabetes.csv')
+data = extract_features()
 X = data.ix[:, :-1]
 y = data.ix[:, -1]
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=5)
+# Isolate a training set for CV.
+# Testing set won't be touched until CV is complete.
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=10)
 
-# XGBoost
+# Note that the train/test split *must* be done before any imputation.
+# If we impute values before isolating the training set,
+# then values from the testing set might 
+# influence the imputed values in the training set.
+# See Abu-Mostafa's "Learning from Data" to read more about this issue,
+# sometimes referred to as "data snooping".
+
+########################################
+# Impute meaningless zero values
+########################################
+
+# Impute each set in isolation to avoid snooping
+X_train = impute_pima(X_train)
+X_test = impute_pima(X_test)
+
+########################################
+# Cross-validate
+########################################
+
+# Instantiate XGBoost
 n_estimators = 100
 dtrain = xgb.DMatrix(X_train, y_train)
 
+# XGBoost was tuned on the raw data.
 clf = XGBClassifier(n_estimators=100, #70
                     max_depth=3, 
                     min_child_weight=5, 
@@ -29,19 +50,38 @@ clf = XGBClassifier(n_estimators=100, #70
                     reg_alpha=0.001,
                     seed=1)
 
-clf.fit(X_train, y_train, eval_metric='logloss')
-        
-pred = clf.predict(X_test)
-print "\nlog-loss of XGB: " 
-print log_loss(y_test, pred)
-print "\nAUC of XGB: " 
-print roc_auc_score(y_test, pred)
-print "\nF1-score of XGB: " 
-print f1_score(y_test, pred)
-print "\nAccuracy of XGB: " 
-print accuracy_score(y_test, pred)
-print "\n"
+# Cross-validate XGBoost
+params = clf.get_xgb_params() # Extract parameters from XGB instance to be used for CV
+num_boost_round = clf.get_params()['n_estimators'] # XGB-CV has different names than sklearn
 
+cvresult = xgb.cv(params, dtrain, num_boost_round=num_boost_round, 
+                  nfold=10, metrics=['logloss', 'auc'], seed=1)
+
+print cvresult
+
+# Summary
+print "="*50
+print "\nResults for 100 rounds of 10-fold cross-validation:"
+print "\nBest mean log-loss: %.4f" % cvresult['test-logloss-mean'].min()
+print "\nBest mean AUC: %.4f" % cvresult['test-auc-mean'].max()
+print "="*50
+
+########################################
+# Test
+########################################
+
+clf.fit(X_train, y_train, eval_metric='logloss')
+pred = clf.predict(X_test)
+
+print "="*50
+print "\nPerformance on unseen data:"
+print "\nlog-loss: %.4f" % log_loss(y_test, pred)
+print "\nAUC: %.4f" % roc_auc_score(y_test, pred)
+print "\nF1 score: %.4f" % f1_score(y_test, pred)
+print "\nAccuracy: %.4f" % accuracy_score(y_test, pred)
+print "="*50
+
+"""
 clf = RandomForestClassifier(n_estimators=100, max_depth=4, max_features=5)
 clf.fit(X_train, y_train)
 pred = clf.predict(X_test)
@@ -67,13 +107,6 @@ print f1_score(y_test, pred)
 print "\nAccuracy of Extra Trees: " 
 print accuracy_score(y_test, pred)
 print "\n"
-
-"""
-# XGBoost CV
-xgb_param = clf.get_xgb_params()
-num_boost_round = clf.get_params()['n_estimators']
-cvresult = xgb.cv(xgb_param, dtrain, num_boost_round=num_boost_round, nfold=10, seed=1)
-print cvresult
 
 # Forest grid search
 max_depth = [3, 4, 5]

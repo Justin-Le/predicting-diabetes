@@ -41,5 +41,28 @@ def extract_features(file='/diabetes.csv'):
 
     return data
 
+def impute_pima(X):
+    normals = [0]*3
+    variables = ['Glucose', 'SkinThickness', 'BMI']
+
+    # Generate imputation values with Gaussian randomness.
+    for n, v in zip(range(len(normals)), variables):
+        # Shift the mean up to account for skewness caused by zeros.
+        v_mean = X[v].mean()*1.5
+
+        # Use surrogate deviation.
+        # (Sometimes I get strange values when using .std(). Why?)
+        v_std = v_mean*0.1
+
+        normals[n] = np.random.normal(loc = v_mean, scale = v_std)
+
+    # Impute.
+    X = X.replace(to_replace = {'Glucose': {0: normals[0]}, 
+                                      'SkinThickness': {0: normals[1]}, 
+                                      'BMI': {0: normals[2]}})
+
+    return X
+
 if __name__ == "__main__":
     extract_features()
+
