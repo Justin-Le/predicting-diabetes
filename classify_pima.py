@@ -4,7 +4,9 @@ from features_pima import *
 import xgboost as xgb
 from xgboost import XGBClassifier
 from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.model_selection import cross_val_score
 from sklearn.metrics import log_loss, roc_auc_score, f1_score, accuracy_score
+from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, \
                              ExtraTreesClassifier
 
@@ -14,7 +16,7 @@ y = data.ix[:, -1]
 
 # Isolate a training set for CV.
 # Testing set won't be touched until CV is complete.
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=10)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=1)
 
 # Note that the train/test split *must* be done before any imputation.
 # If we impute values before isolating the training set,
@@ -35,12 +37,21 @@ X_test = impute_pima(X_test)
 # Cross-validate
 ########################################
 
+# Instantiate logistic regression
+clf = LogisticRegression()
+print "="*50
+print "\nLogistic regression results for 10-fold cross-validation:"
+scores = cross_val_score(clf, X_train, y_train, cv=10, scoring='accuracy')
+print "Accuracies:\n %s\n" % str(scores)
+scores = cross_val_score(clf, X_train, y_train, cv=10, scoring='roc_auc')
+print "\nAUC:\n %s\n" % str(scores)
+
 # Instantiate XGBoost
 n_estimators = 100
 dtrain = xgb.DMatrix(X_train, y_train)
 
 # XGBoost was tuned on the raw data.
-clf = XGBClassifier(n_estimators=100, #70
+bst = XGBClassifier(n_estimators=100, #70
                     max_depth=3, 
                     min_child_weight=5, 
                     gamma=0.5, 
@@ -51,17 +62,19 @@ clf = XGBClassifier(n_estimators=100, #70
                     seed=1)
 
 # Cross-validate XGBoost
-params = clf.get_xgb_params() # Extract parameters from XGB instance to be used for CV
-num_boost_round = clf.get_params()['n_estimators'] # XGB-CV has different names than sklearn
+params = bst.get_xgb_params() # Extract parameters from XGB instance to be used for CV
+num_boost_round = bst.get_params()['n_estimators'] # XGB-CV has different names than sklearn
 
 cvresult = xgb.cv(params, dtrain, num_boost_round=num_boost_round, 
                   nfold=10, metrics=['logloss', 'auc'], seed=1)
 
+print "="*50
+print "\nXGBoost results for 10-fold cross-validation:"
 print cvresult
 
-# Summary
+# XGBoost summary
 print "="*50
-print "\nResults for 100 rounds of 10-fold cross-validation:"
+print "\nXGBoost summary for 100 rounds of 10-fold cross-validation:"
 print "\nBest mean log-loss: %.4f" % cvresult['test-logloss-mean'].min()
 print "\nBest mean AUC: %.4f" % cvresult['test-auc-mean'].max()
 print "="*50
@@ -70,11 +83,22 @@ print "="*50
 # Test
 ########################################
 
-clf.fit(X_train, y_train, eval_metric='logloss')
+clf.fit(X_train, y_train)
 pred = clf.predict(X_test)
 
 print "="*50
-print "\nPerformance on unseen data:"
+print "\nLogistic regression performance on unseen data:"
+print "\nlog-loss: %.4f" % log_loss(y_test, pred)
+print "\nAUC: %.4f" % roc_auc_score(y_test, pred)
+print "\nF1 score: %.4f" % f1_score(y_test, pred)
+print "\nAccuracy: %.4f" % accuracy_score(y_test, pred)
+print "="*50
+
+bst.fit(X_train, y_train, eval_metric='logloss')
+pred = bst.predict(X_test)
+
+print "="*50
+print "\nXGBoost performance on unseen data:"
 print "\nlog-loss: %.4f" % log_loss(y_test, pred)
 print "\nAUC: %.4f" % roc_auc_score(y_test, pred)
 print "\nF1 score: %.4f" % f1_score(y_test, pred)
